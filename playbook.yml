@@ -1,0 +1,94 @@
+---
+- hosts: all
+  remote_user: vagrant
+  sudo: yes
+  vars:
+    jdk_file: jdk-8u121-linux-x64.rpm
+    download_url: http://download.oracle.com/otn-pub/java/jdk/8u121-b13/e9e7ea248e2c4826b92b3f075a80e441/{{jdk_file}}
+    download_folder: /home/vagrant
+    java_archive: "{{download_folder}}/{{jdk_file}}"
+    spring_file: spring-xd-1.3.2.RELEASE-dist.zip
+    spring_path: http://repo.spring.io/libs-release/org/springframework/xd/spring-xd/1.3.2.RELEASE
+    springxd_target_folder: /opt/spring-xd
+    erlang_file: erlang-solutions-1.0-1.noarch.rpm
+    rmq_noarch: rmqnoarch.rpm
+
+  tasks:
+  - name: updating everything
+    yum: 
+      name: "*"
+      state: latest
+
+  - name: installing wget
+    yum: 
+      name: wget
+      state: latest
+
+  - name: installing vim
+    yum:
+      name: vim
+      state: present
+
+  - name: installing unzip
+    yum:
+      name: unzip
+      state: present
+
+  - name: download jdk8
+    command: "wget -q -O {{java_archive}} --no-check-certificate --no-cookies 
+              --header 'Cookie: oraclelicense=accept-securebackup-cookie' 
+              {{download_url}} creates={{java_archive}}"
+  
+  - name: install jdk8
+    yum: 
+      name: /home/vagrant/{{jdk_file}}
+      state: present 
+
+  - name: downloading spring xd
+    get_url:
+      url: "{{spring_path}}/{{spring_file}}"
+      dest: "{{download_folder}}/{{spring_file}}"
+
+  - name: unzip spring xd
+    command: unzip {{download_folder}}/{{spring_file}} 
+            -d {{springxd_target_folder}} 
+            creates=/opt/spring-xd/spring-xd-1.3.2.RELEASE/LICENSE
+
+  - name: download erlang to be able to install rmq
+    get_url: 
+      url: "http://packages.erlang-solutions.com/{{erlang_file}}"
+      dest: "{{download_folder}}/{{erlang_file}}"
+
+  - name: installing erlang first step
+    yum:
+      name: "{{download_folder}}/{{erlang_file}}"
+      state: present
+
+  - name: installing epel -- need it to perform erlang installation
+    yum:
+      name: epel-release
+      state: present
+
+  - name: installing erlang again
+    yum:
+      name: erlang.x86_64
+      state: present
+
+  - name: installing rmq first step
+    command: "wget -O {{download_folder}}/{{rmq_noarch}}
+              https://www.rabbitmq.com/releases/rabbitmq-server/v3.6.1/rabbitmq-server-3.6.1-1.noarch.rpm
+              creates={{download_folder}}/{{rmq_noarch}}"
+
+  - name: installing rmq second step
+    command: "rpm --import https://www.rabbitmq.com/rabbitmq-signing-key-public.asc"
+
+  - name: rmq third step
+    yum:
+      name: "{{download_folder}}/{{rmq_noarch}}" 
+      state: present
+
+  - name: rmq installing management plugin
+    command: "rabbitmq-plugins enable rabbitmq_management"
+
+  - name: starting rmq
+    command: systemctl start rabbitmq-server.service
