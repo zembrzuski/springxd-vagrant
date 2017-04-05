@@ -97,21 +97,12 @@
   - name: starting rmq
     command: systemctl start rabbitmq-server.service
 
-  - name: trying to install my-sql. not sure if I really need it.
-    command: "wget -O {{download_folder}}/{{mysql}} 
-              http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm 
-              creates={{download_folder}}/{{mysql}}"
+  # just for the first time. it would be better if it was idempotent.
+  #- name: creating test test user
+  #  command: rabbitmqctl add_user test test
 
-  - name: mysql second step
-    command: "rpm -ivh {{download_folder}}/{{mysql}} creates={{download_folder}}/{{mysql}}"
+  - name: 
+    command: rabbitmqctl set_user_tags test administrator
 
-  - name: mysql third step
-    yum:
-      name: "*" 
-      state: latest
- 
-  - name: mysql fourth step
-    yum:
-      name: "mysql-server"
-      state: present
-
+  - name:
+    command: rabbitmqctl set_permissions -p / test ".*" ".*" ".*"
